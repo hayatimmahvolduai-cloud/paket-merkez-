@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: paket-merkezi
+    runtime: docker
+    plan: starter
+    disk:
+      name: veri
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DB_FILE
+        value: /data/data.db
+      - key: ADMIN_USER
+        value: fettah
+      - key: ADMIN_PASS
+        sync: false
+      - key: WEBHOOK_KEY
+        generateValue: true

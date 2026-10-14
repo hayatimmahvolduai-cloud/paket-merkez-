@@ -1,0 +1,15 @@
+INTERNETE KOYMA (Render ile)
+
+1) github.com'da ücretsiz hesap aç. Sağ üstte "+" > "New repository" > ad: paket-merkezi > "Private" seç > Create.
+2) Açılan sayfada "uploading an existing file" bağlantısına tıkla.
+   Bu zip'in İÇİNDEKİ tüm dosya ve klasörleri sürükle bırak (public klasörü dahil).
+   "Commit changes" de.
+3) render.com'da hesap aç (GitHub ile giriş yap).
+4) "New +" > "Blueprint" > paket-merkezi deposunu seç.
+5) ADMIN_PASS kutusuna KENDİ GÜÇLÜ ŞİFRENİ yaz (1234 yazma). Onayla.
+   (Disk ve sunucu ücretlidir; güncel fiyatı Render ekranında görürsün.)
+6) 3-5 dakika sonra Render sana https://paket-merkezi-xxxx.onrender.com gibi bir adres verir.
+7) O adrese gir: kullanıcı adı fettah, şifre: 5. adımda yazdığın.
+8) Kuryeler aynı adrese telefonlarından girer, kendi kullanıcı adı/şifreleriyle.
+   Telefonda tarayıcı menüsünden "Ana ekrana ekle" yapsınlar.
+9) Platform anahtarı: Render > paket-merkezi > Environment > WEBHOOK_KEY.

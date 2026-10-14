@@ -1,0 +1,1 @@
+{"name":"paket-merkezi","version":"1.0.0","scripts":{"start":"node --no-warnings server.js"},"engines":{"node":">=22.5"}}
