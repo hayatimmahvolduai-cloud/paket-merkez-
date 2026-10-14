@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#12263A"><title>Paket Merkezi</title>
+<style>
+:root{--bg:#EEF2F4;--card:#fff;--ink:#12263A;--mute:#5E7080;--line:#D5DDE3;--acc:#F2B705;--ok:#1F9D6B;--bad:#D64545}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button,input,select{font:inherit;color:inherit}main{max-width:1000px;margin:auto;padding:14px}
+header{background:var(--ink);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}header b{margin-right:auto;font-size:17px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:12px}
+.grid .card{margin:0}.grid b{font-size:24px;display:block}.mute{color:var(--mute);font-size:13px}
+.btn{border:0;border-radius:8px;padding:9px 13px;font-weight:700;background:var(--ink);color:#fff;cursor:pointer}.btn.g{background:var(--ok)}.btn.y{background:var(--acc);color:var(--ink)}.btn.o{background:none;border:1.5px solid var(--line);color:var(--ink);text-decoration:none;display:inline-block}
+input,select{background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:9px;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{margin-left:auto}
+.o{border-top:1px solid var(--line);padding:10px 0;display:grid;gap:5px}.o:first-child{border-top:0}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--mute);color:#fff}
+.pay{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;border:1.5px solid var(--acc);background:#F2B70526}.pay.online{border-color:var(--ok);background:none;color:var(--ok)}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:7px 3px;border-top:1px solid var(--line);font-size:14px}th{border:0;color:var(--mute);font-size:12px}
+.f{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}h2{font-size:16px;margin:16px 0 8px}
+.login{max-width:340px;margin:12vh auto;display:grid;gap:10px}.err{color:var(--bad);font-size:13px}
+.cols{display:grid;gap:12px}@media(min-width:850px){.cols{grid-template-columns:1.5fr 1fr}}
+.big{font-size:18px;font-weight:800}.scroll{overflow-x:auto}
+</style></head><body><div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),P={YEMEKSEPETI:'Yemeksepeti',TRENDYOL:'Trendyol Yemek',MIGROS:'Migros Yemek',TELEFON:'Telefon'};
+const tl=n=>Math.round(n||0).toLocaleString('tr-TR')+' ₺',esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+let token=localStorage.getItem('tok'),me=null,seen=null,timer=null,lastErr='';
+async function api(p,method='GET',data){
+  const r=await fetch('/api/'+p,{method,headers:{'content-type':'application/json',authorization:'Bearer '+token},body:data?JSON.stringify(data):undefined});
+  const j=await r.json().catch(()=>({}));if(r.status===401&&token){logout();throw 0}if(!r.ok)throw new Error(j.error||'Hata');return j}
+function logout(){localStorage.removeItem('tok');token=null;me=null;clearInterval(timer);login()}
+function login(){$('#app').innerHTML=`<form class="card login" id="lf"><h2 style="margin:0">Paket Merkezi</h2><input name="u" placeholder="Kullanıcı adı" autocomplete="username" required><input name="p" type="password" placeholder="Şifre" autocomplete="current-password" required><button class="btn y">Giriş yap</button><div class="err" id="le"></div></form>`;
+  $('#lf').onsubmit=async e=>{e.preventDefault();const f=e.target;try{const r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:f.u.value,password:f.p.value})});const j=await r.json();if(!r.ok)throw new Error(j.error);token=j.token;localStorage.setItem('tok',token);start()}catch(x){$('#le').textContent=x.message}}}
+async function start(){try{me=await api('me')}catch{return}seen=null;clearInterval(timer);await draw();timer=setInterval(draw,5000)}
+const hdr=()=>`<header><b>Paket Merkezi</b><span class="mute" style="color:#cfd8df">${esc(me.name)}</span><button class="btn y" onclick="logout()">Çıkış</button></header>`;
+function beep(){try{const a=new (window.AudioContext||webkitAudioContext)(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>o.stop(),250)}catch{}}
+function focused(){const a=document.activeElement;return a&&(a.tagName==='INPUT'||a.tagName==='SELECT')}
+async function draw(){if(focused())return;try{me.role==='admin'?await admin():await courier()}catch(e){}}
+const mapUrl=o=>'https://www.google.com/maps/search/?api=1&query='+(o.lat!=null?o.lat+','+o.lng:encodeURIComponent(o.address));
+async function admin(){
+  const [O,C,R]=await Promise.all([api('orders'),api('couriers'),api('report?days=14')]);
+  const t=O.reduce((a,o)=>a+o.total,0),cash=O.filter(o=>o.pay==='nakit').reduce((a,o)=>a+o.total,0);
+  const ids=O.map(o=>o.id);if(seen&&ids.some(i=>!seen.includes(i)))beep();seen=ids;
+  const by={};O.forEach(o=>{by[o.platform]=by[o.platform]||[0,0];by[o.platform][0]++;by[o.platform][1]+=o.total});
+  const w=R.daily.length?R.daily.reduce((a,d)=>a+d.revenue,0):0;
+  $('#app').innerHTML=hdr()+`<main><div class="grid"><div class="card"><b>${O.length}</b><span class="mute">Bugünkü sipariş</span></div><div class="card"><b>${tl(t)}</b><span class="mute">Ciro</span></div><div class="card"><b>${tl(cash)}</b><span class="mute">Nakit</span></div><div class="card"><b>${tl(t-cash)}</b><span class="mute">Online</span></div><div class="card"><b>${O.filter(o=>o.status==='yeni').length}</b><span class="mute">Atama bekliyor</span></div></div>
+  <div class="cols"><div><h2>Siparişler</h2><div class="card">${O.map(o=>`<div class="o"><div class="row"><span class="tag">${P[o.platform]||esc(o.platform)}</span><b>#${o.id} ${esc(o.customer)}</b><b class="sp">${tl(o.total)}</b></div><div class="mute">${esc(o.address)} · ${esc(o.phone)}</div><div>${esc(o.items.join(', '))}</div>
+  <div class="row"><span class="pay ${o.pay}">${o.pay==='nakit'?'Nakit':'Online'}</span><span class="mute">${o.status==='teslim'?'Teslim edildi':o.status==='yolda'?'Yolda: '+esc(o.courier):'Atama bekliyor'}</span>
+  <select class="sp" style="width:auto" ${o.status==='teslim'?'disabled':''} onchange="assign(${o.id},this.value)"><option value="">Kurye seç</option>${C.map(c=>`<option value="${c.id}" ${o.courier_id===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>`).join('')||'<p class="mute">Bugün sipariş yok.</p>'}</div></div>
+  <div><h2>Kuryeler ve nakit</h2><div class="card scroll"><table><tr><th>Kurye</th><th>Teslim</th><th>Nakit</th><th></th></tr>${C.map(c=>`<tr><td><b>${esc(c.name)}</b><div class="mute">${c.active} yolda</div></td><td>${c.todayCount}</td><td>${tl(c.cashDue)}</td><td>${c.cashDue>0?`<button class="btn g" onclick="settle(${c.id})">Nakdi aldım</button>`:''}</td></tr>`).join('')}</table>
+  <form class="f" style="margin-top:10px" onsubmit="addC(event)"><input name="name" placeholder="Kurye adı" required><input name="username" placeholder="Kullanıcı adı" required><input name="password" placeholder="Şifre (en az 4)" required><button class="btn">Kurye ekle</button></form></div>
+  <h2>Platform dağılımı</h2><div class="card"><table>${Object.entries(by).map(([k,v])=>`<tr><td>${P[k]||esc(k)}</td><td>${v[0]} sipariş</td><td>${tl(v[1])}</td></tr>`).join('')}</table></div></div></div>
+  <h2>Gelir raporu (son 14 gün: ${tl(w)})</h2><div class="card scroll"><table><tr><th>Gün</th><th>Sipariş</th><th>Ciro</th><th>Nakit</th><th>Online</th></tr>${R.daily.map(d=>`<tr><td>${d.day}</td><td>${d.orders}</td><td>${tl(d.revenue)}</td><td>${tl(d.cash)}</td><td>${tl(d.online)}</td></tr>`).join('')}</table></div>
+  <h2>Sipariş ekle (telefon / elle)</h2><form class="card f" onsubmit="addO(event)"><select name="platform"><option value="TELEFON">Telefon</option><option value="YEMEKSEPETI">Yemeksepeti</option><option value="TRENDYOL">Trendyol Yemek</option><option value="MIGROS">Migros Yemek</option></select><input name="customer" placeholder="Müşteri" required><input name="phone" placeholder="Telefon" required><input name="address" placeholder="Adres" required><input name="items" placeholder="Ürünler (virgülle)" required><input name="total" type="number" placeholder="Tutar ₺" required><select name="pay"><option value="nakit">Nakit</option><option value="online">Online</option></select><button class="btn y">Ekle</button></form>
+  <p class="mute">Platform entegrasyonu: siparişleri <code>POST /api/webhook/yemeksepeti</code> adresine <code>x-api-key: ${esc(me.webhookKey)}</code> başlığıyla gönder.</p></main>`}
+async function courier(){
+  const [O,S]=await Promise.all([api('orders'),api('me/summary')]),J=O.filter(o=>o.status!=='teslim');
+  const ids=J.map(o=>o.id);if(seen&&ids.some(i=>!seen.includes(i))){beep();navigator.vibrate&&navigator.vibrate(300)}seen=ids;
+  $('#app').innerHTML=hdr()+`<main style="max-width:460px"><div class="grid"><div class="card"><b>${S.todayCount}</b><span class="mute">Bugün teslim</span></div><div class="card"><b>${tl(S.cashDue)}</b><span class="mute">Dükkana verilecek nakit</span></div></div>
+  ${J.map(o=>`<div class="card" style="display:grid;gap:8px"><div class="row"><span class="tag">${P[o.platform]||esc(o.platform)}</span><span class="mute">#${o.id}</span><span class="pay ${o.pay} sp">${o.pay==='nakit'?'Nakit al: '+tl(o.total):'Ödendi'}</span></div><div class="big">${esc(o.customer)}</div><div>${esc(o.address)}</div><div class="mute">${esc(o.items.join(', '))}</div>
+  <div class="row"><a class="btn o" href="tel:${esc(o.phone.replace(/\s/g,''))}">Ara</a><a class="btn o" target="_blank" rel="noopener" href="${mapUrl(o)}">Yol tarifi</a>${o.status==='yolda'&&!o.picked?`<button class="btn g sp" onclick="done(${o.id})">Teslim ettim</button>`:''}</div></div>`).join('')||'<p class="mute" style="text-align:center;padding:30px">Atanmış sipariş yok. Yeni paket gelince telefon ses çıkarır.</p>'}</main>`}
+const act=async(f)=>{try{await f();draw()}catch(e){if(e)alert(e.message)}};
+window.assign=(id,c)=>act(()=>api(`orders/${id}/assign`,'POST',{courier_id:c?+c:null}));
+window.settle=id=>act(()=>api(`couriers/${id}/settle`,'POST'));
+window.done=id=>confirm('Teslim edildi olarak işaretlensin mi?')&&act(()=>api(`orders/${id}/status`,'POST',{status:'teslim'}));
+window.addC=e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));act(()=>api('couriers','POST',f));e.target.reset()};
+window.addO=e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.items=f.items.split(',').map(s=>s.trim());f.total=+f.total;act(()=>api('orders','POST',f));e.target.reset()};
+token?start():login();
+</script></body></html>
